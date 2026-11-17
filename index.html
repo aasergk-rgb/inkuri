@@ -76,8 +76,35 @@ h1{margin:0;font-size:20px;letter-spacing:.12em;font-weight:800;background:linea
 .row .d{font-size:11px;color:var(--dim);margin-top:2px}
 .row .e{font-size:11px;color:var(--accent);margin-top:2px}
 .row .btn{flex:0 0 112px}
-.tree{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.tree{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:6px}
 @media (max-width:640px){.tree{grid-template-columns:repeat(2,minmax(0,1fr))}}
+[hidden]{display:none!important}
+.eventbar{margin-top:10px;display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;border:1px solid #6a5a2a;background:linear-gradient(90deg,#2a2208,#0f1206)}
+.eventbar .info{flex:1;min-width:0}
+.eventbar .t{font-weight:700;color:var(--gene)}
+.eventbar .d{font-size:11px;color:var(--dim)}
+.eventbar .btn{flex:0 0 120px}
+.progress{height:8px;border-radius:5px;background:#000a;overflow:hidden;margin:4px 0 2px}
+.progress>b{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#7aa7ff)}
+.prow{display:grid;grid-template-columns:110px 1fr 70px;gap:8px;align-items:center;font-size:12px;margin:4px 0}
+.prow span:last-child{text-align:right;color:var(--dim);font-variant-numeric:tabular-nums}
+.overall{border:1px solid #2f5577;background:var(--panel2);border-radius:12px;padding:10px 12px;margin-bottom:10px}
+.overall .big{font-size:26px;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}
+.achs{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px}
+.ach{border:1px solid var(--line);background:var(--panel2);border-radius:9px;padding:7px;font-size:11px;opacity:.5}
+.ach.got{opacity:1;border-color:#8a7440;background:linear-gradient(180deg,#221c0c,#14110a)}
+.ach .an{font-weight:700;font-size:12px}
+.ach.got .an{color:var(--gene)}
+.ach .ad{color:var(--dim);margin-top:2px;line-height:1.35}
+.road{display:flex;flex-direction:column;gap:5px}
+.road .rf{display:flex;gap:8px;align-items:flex-start;font-size:12px;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2)}
+.road .rf.on{border-color:#1f6d61}
+.road .rf .ri{flex:0 0 18px;text-align:center}
+.road .rf .rd{color:var(--dim);font-size:11px}
+.chip{display:inline-block;font-size:10px;padding:1px 6px;border-radius:999px;border:1px solid var(--line);color:var(--dim);margin-left:4px}
+.chip.ok{color:var(--good);border-color:#2d8a74}
+.stars{color:var(--gene);letter-spacing:1px}
+.toggle-btn{flex:0 0 70px !important}
 .branch{display:flex;flex-direction:column;gap:6px}
 .branch h4{margin:0 0 2px;font-size:11px;color:var(--dim);font-weight:600;text-align:center;letter-spacing:.05em}
 .mut{border:1px solid var(--line);background:var(--panel2);border-radius:9px;padding:7px;font-size:11px;position:relative;text-align:left;width:100%}
@@ -141,6 +168,10 @@ h1{margin:0;font-size:20px;letter-spacing:.12em;font-weight:800;background:linea
         <div class="overlay" id="tankInfo"></div>
         <div class="alarm" id="alarm"></div>
       </div>
+      <div class="eventbar" id="eventBar" hidden>
+        <div class="info"><div class="t" id="evName"></div><div class="d" id="evDesc"></div></div>
+        <button class="btn primary" id="evBtn" onclick="observe()"></button>
+      </div>
       <div class="card" style="margin-top:10px">
         <div class="chartwrap"><canvas id="chart"></canvas></div>
         <div class="legend" id="legend"></div>
@@ -153,11 +184,15 @@ h1{margin:0;font-size:20px;letter-spacing:.12em;font-weight:800;background:linea
         <button class="tab on" data-tab="env">環境<span class="badge" id="bEnv"></span></button>
         <button class="tab" data-tab="mut">突然変異<span class="badge" id="bMut"></span></button>
         <button class="tab" data-tab="ext">大絶滅<span class="badge" id="bExt"></span></button>
+        <button class="tab" data-tab="chal" id="tabChal" hidden>試練<span class="badge" id="bChal"></span></button>
+        <button class="tab" data-tab="ach">実績<span class="badge" id="bAch"></span></button>
         <button class="tab" data-tab="log">記録</button>
       </div>
       <div class="pane on" id="p-env"></div>
       <div class="pane" id="p-mut"></div>
       <div class="pane" id="p-ext"></div>
+      <div class="pane" id="p-chal"></div>
+      <div class="pane" id="p-ach"></div>
       <div class="pane" id="p-log">
         <div class="kv" id="statsKv"></div>
         <div class="section-t">生態系ログ</div>
@@ -188,7 +223,9 @@ const SPECIES = [
   {id:1, name:'動物プランクトン', short:'P', color:'#ff9ad5', w:5,   seed:0.06, xref:1.0, unlock:40,   intro:30,   perUnit:1e6},
   {id:2, name:'小型魚',           short:'魚', color:'#8cc8ff', w:25,  seed:0.03, xref:0.35,unlock:6000, intro:2000,  perUnit:2e3},
   {id:3, name:'チョウチンアンコウ', short:'顎', color:'#ff7a4d', w:120, seed:0.015,xref:0.12,unlock:3e6,  intro:6e5,  perUnit:40},
+  {id:4, name:'ホネクイハナムシ', short:'骨', color:'#d7a6ff', w:6,  seed:0.05, xref:1.5, unlock:2e5,  intro:4e4,  perUnit:3e4},
 ];
+const N = SPECIES.length;
 const BASE = { r:1.0, am:[2.2,1.4,1.0], H:[0.8,0.6,0.4], e:[0.6,0.55,0.5], m:[0.25,0.18,0.12], c:[0,0.08,0.12,0.1], cm:{swarm:3, cannibal:3, gigant:2}, kd:0.15, rec:1, thr:1e-4, speed:1.4 };
 
 const WORLDS = [
@@ -209,7 +246,7 @@ const WORLDS = [
 ];
 
 const BRANCHES = [
-  {id:'pro', name:'生産者'}, {id:'pla', name:'プランクトン'}, {id:'fis', name:'小型魚'}, {id:'apx', name:'頂点捕食者'}, {id:'dec', name:'分解・全体'}
+  {id:'pro', name:'生産者'}, {id:'pla', name:'プランクトン'}, {id:'fis', name:'小型魚'}, {id:'apx', name:'頂点捕食者'}, {id:'dec', name:'分解・全体'}, {id:'wrm', name:'分解者', feat:'worm'}
 ];
 const MUTS = [
   {id:'spore',  b:'pro', name:'休眠胞子',     cost:500,   req:[],          desc:'バクテリアは絶滅しない（最低密度を維持）。'},
@@ -229,6 +266,8 @@ const MUTS = [
   {id:'marine', b:'dec', name:'マリンスノー循環', cost:5e7,   req:['scav'],risky:true, desc:'栄養再循環×3、環境収容力+1。富栄養化と同じく波を強める。'},
   {id:'symb',   b:'dec', name:'共生ネットワーク', cost:5e8, req:['swarm','maw'], desc:'多様性ボーナスの効果×2。'},
   {id:'resil',  b:'dec', name:'回復力',       cost:2e10,  req:['symb'],    desc:'絶滅ラインを1/10に下げる。'},
+  {id:'osedax', b:'wrm', name:'骨食い共生',   cost:2e6,   req:[],          desc:'ホネクイハナムシが共生細菌で骨を溶かす。死骸の摂食力×1.5、産出×2。'},
+  {id:'whalef', b:'wrm', name:'鯨骨群集',     cost:3e8,   req:['osedax'],  desc:'鯨骨落下イベントの死骸量×3。ホネクイの自己制御×0.6。'},
   {id:'hyper',  b:'dec', name:'超循環',       cost:1e13,  req:['resil','gigant','biolum'], desc:'生態系が自己触媒的に回る。全産出×5。'},
 ];
 const MUT = Object.fromEntries(MUTS.map(m=>[m.id,m]));
@@ -241,12 +280,136 @@ const FOSSIL_UP = [
   {id:'time',  name:'時間圧縮',   max:4, cost:L=>Math.ceil(5*Math.pow(4,L)), desc:L=>`生態系の時間×1.25（現在 ×${Math.pow(1.25,L).toFixed(2)}）`},
   {id:'stable',name:'安定化遺伝子',max:3, cost:L=>Math.ceil(8*Math.pow(4,L)), desc:L=>`絶滅ラインを1/3に（現在 1/${Math.pow(3,L)}）`},
 ];
+const AUTO_IDS = ['aReintro','aCull','aUp','aMut'];
+FOSSIL_UP.push(
+  {id:'aReintro', name:'自動再導入',   auto:true, max:1, cost:()=>3,  desc:()=>'絶滅した種をエネルギーが足りれば自動で再導入する。'},
+  {id:'aCull',    name:'自動間引き',   auto:true, max:1, cost:()=>8,  desc:()=>'個体群が波のピークを越えた瞬間に自動で間引く。'},
+  {id:'aUp',      name:'自動環境強化', auto:true, max:1, cost:()=>15, desc:()=>'生息域拡張・熱水噴出強化を自動購入。富栄養化は設定した上限まで。'},
+  {id:'aMut',     name:'自動突然変異', auto:true, max:1, cost:()=>40, desc:()=>'⚠以外の突然変異を安い順に自動で発現させる。'},
+);
 const KEEP_SETS = [[], ['spore','decomp','filter'], ['cannibal','cyst','chemo'], ['maw','scav','ovovivi']];
+
+const JP_UNITS = ['', '万','億','兆','京','垓','秭','穣','溝','澗','正','載','極','恒河沙','阿僧祇','那由他','不可思議','無量大数'];
+/* ---------- 解放される機能 ---------- */
+const FEATURES = [
+  {id:'events', name:'環境イベント',     cond:M=>M.prestiges>=1, req:'大絶滅 1回', desc:'噴火・鯨骨落下・酸欠などが不定期に発生。観測するとボーナス。'},
+  {id:'auto',   name:'自動化遺伝子',     cond:M=>M.prestiges>=1, req:'大絶滅 1回', desc:'化石遺伝子で再導入・間引き・強化・突然変異を自動化。'},
+  {id:'mastery',name:'環境適応',         cond:M=>M.prestiges>=1, req:'大絶滅 1回', desc:'各環境で高い記録を出すと、その環境固有の永続ボーナス。'},
+  {id:'worm',   name:'第5の種：分解者',   cond:M=>M.prestiges>=2, req:'大絶滅 2回', desc:'死骸を食べるホネクイハナムシと専用の突然変異系統。'},
+  {id:'chal',   name:'試練',             cond:M=>M.prestiges>=3, req:'大絶滅 3回', desc:'制限付きの生態系を踏破して強力な永続報酬を得る。'},
+  {id:'pansp',  name:'彗星播種',         cond:M=>M.fossilsEarned>=300||M.pansp>0, req:'累計化石遺伝子 300', desc:'化石遺伝子と環境を手放し「星の種」を得る第二の転生。'},
+];
+const feat = id => FEATURES.find(f=>f.id===id).cond(S.meta);
+
+/* ---------- 環境イベント ---------- */
+const EVENTS = [
+  {id:'erupt',   name:'熱水噴火',     desc:'増殖率×2・環境収容力+1。波が大きくなる', dur:30, mod:{r:2, K:1}},
+  {id:'whale',   name:'鯨骨落下',     desc:'巨大な死骸が沈んできた。分解者の宴', dur:25, mod:{}, start:R=>{ R.D += 3*(has('whalef')?3:1); }},
+  {id:'seep',    name:'冷水湧出',     desc:'時間の流れ×0.5。凪の時間', dur:30, mod:{speed:0.5}},
+  {id:'hypoxia', name:'酸欠層',       desc:'消費者の死亡率×1.6。耐えろ', dur:20, mod:{m:1.6}},
+  {id:'bloom',   name:'生物発光の宴', desc:'全産出×3', dur:20, mod:{yield:3}},
+  {id:'redtide', name:'赤潮',         desc:'プランクトンが急増した', dur:15, mod:{}, start:R=>{ if(R.x[1]>0) R.x[1] = Math.min(50, R.x[1]*2.2); }},
+];
+const EV = Object.fromEntries(EVENTS.map(e=>[e.id,e]));
+
+/* ---------- 試練 ---------- */
+const CHALLENGES = [
+  {id:'noapex', name:'頂点なき海', desc:'チョウチンアンコウを導入できない。', goal:1e10, reward:'小型魚の産出×3'},
+  {id:'glut',   name:'飽食の海',   desc:'富栄養化Lv12で開始。共食い・群体形成・深海巨大症が発現しない。', goal:1e11, reward:'臨界ボーナスの上限 ×2.4 → ×3.1'},
+  {id:'nomut',  name:'変異なき海', desc:'突然変異を一切獲得できない。', goal:1e9, reward:'突然変異コスト×0.5'},
+  {id:'fragile',name:'脆き海',     desc:'絶滅ラインが100倍。', goal:1e11, reward:'絶滅ライン1/3'},
+  {id:'rapid',  name:'激流の海',   desc:'時間が3倍速。熱水噴出強化が使えない。', goal:1e12, reward:'熱水噴出強化の効果×2'},
+  {id:'barren', name:'不毛の海',   desc:'生息域拡張が使えない。', goal:1e10, reward:'生息域拡張の効果 ×1.4 → ×1.5'},
+];
+const GLUT_BLOCK = ['cannibal','swarm','gigant'];
+const chal = () => S.run.challenge;
+const won = id => !!S.meta.challenges[id];
+
+/* ---------- 環境適応（ワールド熟練） ---------- */
+const MASTERY_T = [9, 11, 13]; // log10(累計エネルギー / 環境規模)
+const MASTERY = [
+  {name:'熱水の記憶',   desc:'全産出×1.5'},
+  {name:'洞窟の分解者', desc:'栄養再循環×1.25'},
+  {name:'氷下の忍耐',   desc:'化石遺伝子獲得×1.25'},
+  {name:'メタン代謝',   desc:'バクテリア増殖率×1.15'},
+  {name:'重力の顎',     desc:'アンコウ産出×2'},
+  {name:'雲の漂流',     desc:'イベント観測報酬×1.5・発生間隔短縮'},
+  {name:'核の時間',     desc:'時間の流れ×1.1'},
+];
+function mTier(w){ const b = S.meta.wbest[w] ?? -1; return MASTERY_T.filter(t=>b>=t).length; }
+
+/* ---------- 彗星播種（第二転生） ---------- */
+const STAR_UP = [
+  {id:'cosmic', name:'星間記憶',   max:Infinity, cost:L=>Math.ceil(Math.pow(2,L)), desc:L=>`全産出×3（現在 ×${fmt(Math.pow(3,L))}）`},
+  {id:'rain',   name:'化石の雨',   max:6, cost:L=>Math.ceil(2*Math.pow(2.5,L)), desc:L=>`化石遺伝子獲得×2（現在 ×${Math.pow(2,L)}）`},
+  {id:'soup',   name:'原始スープ', max:3, cost:L=>[2,6,18][L], desc:L=>`各ランを生息域拡張Lv${3*(L+1>3?3:L+1)}で開始（現在 Lv${3*L}）`},
+  {id:'autokeep',name:'自律の記憶',max:1, cost:()=>3, desc:()=>'彗星播種しても自動化遺伝子を失わない'},
+  {id:'fast',   name:'加速進化',   max:3, cost:L=>Math.ceil(4*Math.pow(3,L)), desc:L=>`時間の流れ×1.2（現在 ×${Math.pow(1.2,L).toFixed(2)}）`},
+];
+function panspGain(){ const f = S.meta.fossilsEarned; return f < 300 ? 0 : Math.floor(Math.pow(f/300, 0.5)); }
+
+/* ---------- 実績 ---------- */
+const RATE_ACH = [[1e3,'灯る深海'],[1e6,'百万の鼓動'],[1e9,'十億の顎'],[1e12,'兆の群れ'],[1e16,'京の海'],[1e20,'垓の潮流'],[1e24,'秭の深淵'],[1e32,'溝を満たすもの'],[1e40,'正の彼方'],[1e48,'極の生態系']];
+const WORLD_ACH = ['','暗闇の湖へ','氷の下で','メタンの夜明け','重力の井戸','雲上の楽園','中性子の鼓動'];
+const ACHS = [
+  {id:'a_p',   cat:'生態系', name:'連鎖の始まり',   desc:'動物プランクトンを導入する', chk:()=>S.run.unlocked[1]},
+  {id:'a_f',   cat:'生態系', name:'鰭のある捕食者', desc:'小型魚を導入する', chk:()=>S.run.unlocked[2]},
+  {id:'a_a',   cat:'生態系', name:'深淵の顎',       desc:'チョウチンアンコウを導入する', chk:()=>S.run.unlocked[3]},
+  {id:'a_w',   cat:'生態系', name:'骨を喰らう者',   desc:'ホネクイハナムシを導入する', chk:()=>S.run.unlocked[4]},
+  {id:'a_c4',  cat:'生態系', name:'完全なピラミッド', desc:'4段の食物連鎖が同時に生存', chk:()=>S.run.x.slice(0,4).every(v=>v>0)},
+  {id:'a_c5',  cat:'生態系', name:'五重奏',         desc:'5種すべてが同時に生存', chk:()=>S.run.x.every(v=>v>0)},
+  {id:'a_e1',  cat:'生態系', name:'最初の喪失',     desc:'初めて種が絶滅する', chk:()=>S.meta.totalExt>=1},
+  {id:'a_e100',cat:'生態系', name:'絶滅の常連',     desc:'累計100回の絶滅', chk:()=>S.meta.totalExt>=100},
+  {id:'a_brink',cat:'生態系',name:'崖っぷちの帰還', desc:'絶滅ラインの3倍未満から1000倍以上まで回復する', chk:()=>S.meta.brinkDone},
+  {id:'a_edge2',cat:'生態系',name:'波乗り',         desc:'臨界ボーナス×2.0以上', chk:()=>S.meta.maxEdge>=2},
+  {id:'a_edgeM',cat:'生態系',name:'崩壊の縁',       desc:'臨界ボーナスが上限に達する', chk:()=>S.meta.maxEdge>=2.39},
+  {id:'a_div', cat:'生態系', name:'多様なる深淵',   desc:'多様性ボーナス×2.3以上', chk:()=>S.meta.maxDiv>=2.3},
+  {id:'a_silent',cat:'生態系',name:'沈黙の海',      desc:'バクテリアを含む全ての種が絶滅する', chk:()=>S.meta.silent},
+  {id:'a_cull',cat:'生態系', name:'剪定者',         desc:'累計100回間引く', chk:()=>S.meta.culls>=100},
+  {id:'a_cull2',cat:'生態系',name:'収穫の神',       desc:'累計2000回間引く', chk:()=>S.meta.culls>=2000},
+  ...RATE_ACH.map(([v,n])=>({id:'r'+Math.log10(v), cat:'エネルギー', name:n, desc:`産出 ${fmt(v)}/秒 に到達`, chk:()=>S.meta.bestRate>=v})),
+  {id:'m5',    cat:'進化', name:'変異の兆し',   desc:'1回の生態系で突然変異を5つ発現', chk:()=>Object.keys(S.run.muts).length>=5},
+  {id:'mAll',  cat:'進化', name:'進化の極致',   desc:'分解者以外の全突然変異を同時に発現', chk:()=>MUTS.filter(m=>m.b!=='wrm').every(m=>S.run.muts[m.id])},
+  {id:'mRisk', cat:'進化', name:'危険な賭け',   desc:'⚠突然変異を全て同時に発現', chk:()=>MUTS.filter(m=>m.risky).every(m=>S.run.muts[m.id])},
+  {id:'mWorm', cat:'進化', name:'鯨骨の楽園',   desc:'分解者の突然変異を全て発現', chk:()=>S.run.muts.osedax&&S.run.muts.whalef},
+  {id:'p1',    cat:'大絶滅', name:'大絶滅',         desc:'初めての大絶滅', chk:()=>S.meta.prestiges>=1},
+  {id:'p10',   cat:'大絶滅', name:'繰り返す終末',   desc:'大絶滅10回', chk:()=>S.meta.prestiges>=10},
+  {id:'p50',   cat:'大絶滅', name:'終末の常連',     desc:'大絶滅50回', chk:()=>S.meta.prestiges>=50},
+  {id:'pFast', cat:'大絶滅', name:'速攻絶滅',       desc:'開始から10分以内に大絶滅する', chk:()=>S.meta.fastPrest},
+  {id:'f100',  cat:'大絶滅', name:'化石の山',       desc:'化石遺伝子を一度に100以上保有', chk:()=>S.meta.fossils>=100},
+  {id:'f1e4',  cat:'大絶滅', name:'化石の大陸',     desc:'化石遺伝子を一度に1万以上保有', chk:()=>S.meta.fossils>=1e4},
+  ...WORLD_ACH.slice(1).map((n,k)=>({id:'w'+(k+1), cat:'環境', name:n, desc:`「${WORLDS[k+1].name}」に到達`, chk:()=>S.meta.maxWorld>=k+1})),
+  {id:'ms1',   cat:'環境', name:'環境適応',     desc:'いずれかの環境で適応段階を得る', chk:()=>WORLDS.some(w=>mTier(w.id)>=1)},
+  {id:'ms3',   cat:'環境', name:'完全適応',     desc:'いずれかの環境で適応段階3', chk:()=>WORLDS.some(w=>mTier(w.id)>=3)},
+  {id:'msAll', cat:'環境', name:'万象適応',     desc:'全ての環境で適応段階1以上', chk:()=>WORLDS.every(w=>mTier(w.id)>=1)},
+  {id:'c1',    cat:'試練', name:'試練の踏破者', desc:'試練を1つ達成', chk:()=>Object.keys(S.meta.challenges).length>=1},
+  {id:'c3',    cat:'試練', name:'深淵の修行者', desc:'試練を3つ達成', chk:()=>Object.keys(S.meta.challenges).length>=3},
+  {id:'cAll',  cat:'試練', name:'全ての試練',   desc:'全ての試練を達成', chk:()=>CHALLENGES.every(c=>won(c.id))},
+  {id:'ev10',  cat:'観測', name:'観測者',       desc:'環境イベントを10回観測', chk:()=>S.meta.observed>=10},
+  {id:'ev100', cat:'観測', name:'深海学者',     desc:'環境イベントを100回観測', chk:()=>S.meta.observed>=100},
+  {id:'evW',   cat:'観測', name:'鯨が落ちた日', desc:'鯨骨落下を観測する', chk:()=>S.meta.sawWhale},
+  {id:'auto',  cat:'観測', name:'自律する生態系', desc:'自動化遺伝子を全て獲得', chk:()=>AUTO_IDS.every(a=>S.meta.fossilUp[a])},
+  {id:'s1',    cat:'星', name:'彗星播種',     desc:'初めての彗星播種', chk:()=>S.meta.pansp>=1},
+  {id:'s5',    cat:'星', name:'星の種蒔き',   desc:'彗星播種5回', chk:()=>S.meta.pansp>=5},
+  {id:'sStar', cat:'星', name:'星座の記憶',   desc:'星の種を累計25獲得', chk:()=>S.meta.starsEarned>=25},
+  {id:'t1',    cat:'星', name:'深淵の住人',   desc:'総プレイ時間1時間', chk:()=>S.meta.playTime>=3600},
+  {id:'t10',   cat:'星', name:'深淵そのもの', desc:'総プレイ時間10時間', chk:()=>S.meta.playTime>=36000},
+];
+const ACH_BONUS = 0.05;
+function achCount(){ return Object.keys(S.meta.ach).length; }
+function checkAch(){
+  let n = 0;
+  for(const a of ACHS){
+    if(S.meta.ach[a.id]) continue;
+    let ok = false; try{ ok = !!a.chk(); }catch(e){}
+    if(ok){ S.meta.ach[a.id] = Date.now(); n++; log(`実績解除「${a.name}」— 全産出+${ACH_BONUS*100}%`, 'sys'); toast(`🏆 実績解除：${a.name}`); }
+  }
+  if(n){ recalc(); }
+}
 
 /* ============================================================
    数値フォーマット（日本の命数法）
    ============================================================ */
-const JP_UNITS = ['', '万','億','兆','京','垓','秭','穣','溝','澗','正','載','極','恒河沙','阿僧祇','那由他','不可思議','無量大数'];
 function fmt(n, dec){
   if(!isFinite(n)) return '∞';
   if(n < 0) return '-' + fmt(-n, dec);
@@ -280,40 +443,50 @@ function freshRun(meta){
   const muts = {};
   for(let i=1;i<=keepL;i++) KEEP_SETS[i].forEach(id=>muts[id]=true);
   return {
-    x:[0.4,0,0,0], D:0,
+    x:[0.4,0,0,0,0], D:0,
     energy: 0, runTotal: 0, runTime: 0, peakRate: 0,
-    up:{vol:0, enrich:0, vent:0},
+    up:{vol:3*Math.min(3, (meta.starUp||{}).soup||0), enrich:0, vent:0},
     muts,
-    unlocked:[true, seedL>=1, seedL>=2, false],
-    revive:[0,0,0,0], cull:[0,0,0,0],
+    unlocked:[true, seedL>=1, seedL>=2, false, false],
+    revive:[0,0,0,0,0], cull:[0,0,0,0,0], brink:[0,0,0,0,0],
     extinctions:0, apexEver:false,
+    challenge:null, event:null, eventCd:90,
   };
 }
+const META_DEFAULT = () => ({fossils:0, fossilsEarned:0, fossilUp:{}, world:0, prestiges:0, bestRate:0, playTime:0,
+  wbest:{}, maxWorld:0, ach:{}, challenges:{}, totalExt:0, culls:0, observed:0, sawWhale:false, brinkDone:false, silent:false,
+  maxEdge:1, maxDiv:1, fastPrest:false, stars:0, starsEarned:0, starUp:{}, pansp:0,
+  autoOn:{aReintro:true,aCull:true,aUp:true,aMut:true}, autoEnrichCap:8});
 function freshState(){
-  const meta = {fossils:0, fossilsEarned:0, fossilUp:{}, world:0, prestiges:0, bestRate:0, playTime:0, worldBest:{}};
-  return {v:1, meta, run:freshRun(meta), log:[], lastSave:Date.now()};
+  const meta = META_DEFAULT();
+  return {v:2, meta, run:freshRun(meta), log:[], lastSave:Date.now()};
 }
 let S = freshState();
 
 /* ============================================================
    パラメータ導出
    ============================================================ */
-const has = id => !!S.run.muts[id];
+function mutBlocked(id){ const c = S.run.challenge; return c==='nomut' || (c==='glut' && GLUT_BLOCK.includes(id)); }
+const has = id => !!S.run.muts[id] && !mutBlocked(id);
+function evMod(k, d=1){ const e = S.run.event; return e && EV[e.id].mod[k]!=null ? EV[e.id].mod[k] : d; }
 function world(){ return WORLDS[S.meta.world]; }
 function P(){
   const w = world().mods, R = S.run, F = S.meta.fossilUp;
   const atk = w.atk || 1;
+  const SU = S.meta.starUp, ch = R.challenge;
   const o = {
-    r: BASE.r * (1 + 0.08*R.up.vent) * (has('chemo')?1.5:1) * (w.r||1),
-    K: 1 + 0.35*R.up.enrich + (has('marine')?1:0),
+    r: BASE.r * (1 + 0.08*R.up.vent*(won('rapid')?2:1)) * (has('chemo')?1.5:1) * (w.r||1) * Math.pow(1.15, mTier(3)) * evMod('r'),
+    K: 1 + 0.35*R.up.enrich + (has('marine')?1:0) + evMod('K',0),
     am: [BASE.am[0]*atk, BASE.am[1]*atk*(has('lateral')?1.25:1)*(w.fAtk||1), BASE.am[2]*atk*(has('lure')?1.2:1)],
     H: BASE.H, e: BASE.e,
-    m: [BASE.m[0]*(w.m||1), BASE.m[1]*(w.m||1), BASE.m[2]*(w.m||1)*(has('gigant')?0.6:1)*(w.aMort||1)],
+    m: [BASE.m[0]*(w.m||1)*evMod('m'), BASE.m[1]*(w.m||1)*evMod('m'), BASE.m[2]*(w.m||1)*(has('gigant')?0.6:1)*(w.aMort||1)*evMod('m')],
     c: [0, BASE.c[1]*(has('swarm')?BASE.cm.swarm:1)*(w.cc||1), BASE.c[2]*(has('cannibal')?BASE.cm.cannibal:1)*(w.cc||1), BASE.c[3]*(has('gigant')?BASE.cm.gigant:1)*(w.cc||1)],
     kd: BASE.kd * (has('decomp')?3:1) * (w.kd||1),
-    rec: BASE.rec * (has('decomp')?1.5:1) * (has('marine')?3:1),
-    thr: BASE.thr / (has('resil')?10:1) / Math.pow(3, F.stable||0),
-    speed: BASE.speed * (w.time||1) * Math.pow(1.25, F.time||0),
+    rec: BASE.rec * (has('decomp')?1.5:1) * (has('marine')?3:1) * Math.pow(1.25, mTier(1)),
+    thr: BASE.thr / (has('resil')?10:1) / Math.pow(3, F.stable||0) * (ch==='fragile'?100:1) / (won('fragile')?3:1),
+    speed: BASE.speed * (w.time||1) * Math.pow(1.25, F.time||0) * (ch==='rapid'?3:1) * Math.pow(1.1, mTier(6)) * Math.pow(1.2, SU.fast||0) * evMod('speed'),
+    aW: 0.8*(has('osedax')?1.5:1), HW: 0.5, eW: 0.5, mW: 0.1*(w.m||1)*evMod('m'), cW: 0.3*(has('whalef')?0.6:1)*(w.cc||1),
+    edgeCap: won('glut') ? 6 : 4,
     floorB: 0,
   };
   o.floorB = has('spore') ? o.thr*2 : 0;
@@ -326,20 +499,26 @@ function yieldMult(i){
   let m = 1;
   if(i===0){ if(has('chemo')) m*=2; }
   if(i===1){ if(has('filter')) m*=2; if(has('swarm')) m*=2; }
-  if(i===2){ if(has('cannibal')) m*=1.5; if(has('lateral')) m*=2.5; }
-  if(i===3){ if(has('lure')) m*=3; }
+  if(i===2){ if(has('cannibal')) m*=1.5; if(has('lateral')) m*=2.5; if(won('noapex')) m*=3; }
+  if(i===3){ if(has('lure')) m*=3; m *= Math.pow(2, mTier(4)); }
+  if(i===4){ if(has('osedax')) m*=2; }
   return m;
 }
 let MC = null;
+function volBase(){ return won('barren') ? 1.5 : 1.4; }
 function mults(){
   const R = S.run, F = S.meta.fossilUp;
   let g = 2 * world().scale;
-  g *= Math.pow(1.4, R.up.vol) * Math.pow(1.12, R.up.enrich);
+  g *= Math.pow(volBase(), R.up.vol) * Math.pow(1.12, R.up.enrich);
+  g *= 1 + ACH_BONUS*achCount();
+  g *= Math.pow(1.5, mTier(0));
+  g *= Math.pow(3, S.meta.starUp.cosmic||0) * (1 + 0.1*S.meta.stars);
+  g *= evMod('yield');
   if(has('biolum')) g *= 1.5;
   if(has('gigant')) g *= 2;
   if(has('hyper'))  g *= 5;
   g *= Math.pow(1.75, F.mem||0) * (1 + 0.03*S.meta.fossils);
-  return {global:g, y:[0,1,2,3].map(yieldMult)};
+  return {global:g, y:SPECIES.map((_,i)=>yieldMult(i))};
 }
 
 /* ============================================================
@@ -355,28 +534,34 @@ function diversityMult(x){
 }
 function incomeRate(x, D){
   let s = 0;
-  for(let i=0;i<4;i++) s += SPECIES[i].w * MC.y[i] * x[i];
+  for(let i=0;i<N;i++) s += SPECIES[i].w * MC.y[i] * x[i];
   if(has('scav')) s += 12 * D;
   return s * MC.global * lastDiversity * lastEdge;
 }
 function step(dtSim, events){
   const R = S.run, p = PC;
-  let [B, Pl, F, A] = R.x, D = R.D;
+  let [B, Pl, F, A, W] = R.x, D = R.D;
   const f0 = p.am[0]*B/(B+p.H[0]), f1 = p.am[1]*Pl/(Pl+p.H[1]), f2 = p.am[2]*F/(F+p.H[2]);
   const flux = p.kd*D;
   const dB = p.r*(1 + p.rec*flux/(0.3+flux))*B*(1-B/p.K) - f0*Pl;
   const dP = p.e[0]*f0*Pl - p.m[0]*Pl - f1*F - p.c[1]*Pl*Pl;
   const dF = p.e[1]*f1*F  - p.m[1]*F  - f2*A - p.c[2]*F*F;
   const dA = p.e[2]*f2*A  - p.m[2]*A  - p.c[3]*A*A;
-  const dD = p.m[0]*Pl + p.m[1]*F + p.m[2]*A + p.c[1]*Pl*Pl + p.c[2]*F*F + p.c[3]*A*A + 0.25*(1-p.e[0])*f0*Pl - p.kd*D;
-  const nx = [B+dB*dtSim, Pl+dP*dtSim, F+dF*dtSim, A+dA*dtSim];
+  const gW = p.aW*D/(D+p.HW);
+  const dW = p.eW*gW*W - p.mW*W - p.cW*W*W;
+  const dD = - gW*W + 0.5*p.mW*W + p.m[0]*Pl + p.m[1]*F + p.m[2]*A + p.c[1]*Pl*Pl + p.c[2]*F*F + p.c[3]*A*A + 0.25*(1-p.e[0])*f0*Pl - p.kd*D;
+  const nx = [B+dB*dtSim, Pl+dP*dtSim, F+dF*dtSim, A+dA*dtSim, W+dW*dtSim];
   R.D = Math.max(0, D + dD*dtSim);
-  for(let i=0;i<4;i++){
+  for(let i=0;i<N;i++){
     let v = nx[i];
     if(!(v > 0)) v = 0;
     if(i===0 && p.floorB && v < p.floorB && R.x[0] > 0) v = Math.max(v, p.floorB);
     if(v > 0 && v < p.thr && !(i===0 && p.floorB)){
       v = 0; events && events.push(['ext', i]);
+    }
+    if(!(i===0 && p.floorB)){
+      if(v > 0 && v < p.thr*3) R.brink[i] = 1;
+      else if(R.brink[i] && v > p.thr*1000){ R.brink[i] = 0; S.meta.brinkDone = true; }
     }
     if(v > 50) v = 50;
     nx[i] = v;
@@ -385,7 +570,8 @@ function step(dtSim, events){
 }
 function onExtinct(i){
   const R = S.run;
-  R.extinctions++;
+  R.extinctions++; S.meta.totalExt++;
+  if(R.x.every(v=>v<=0) && R.unlocked[1]) S.meta.silent = true;
   const autoRev = (i===1 && has('cyst')) ? 20 : (i===2 && has('ovovivi')) ? 30 : 0;
   if(autoRev){ R.revive[i] = autoRev; log(`${SPECIES[i].name} が絶滅… ${autoRev}秒後に休眠体から復活する`, 'ext'); }
   else log(`${SPECIES[i].name} が絶滅した`, 'ext');
@@ -405,9 +591,11 @@ function pushHist(){
     let mn=Infinity, mx=0;
     for(let k=hist.length-n;k<hist.length;k++){ const v=hist[k][0]; if(v>0){ mn=Math.min(mn,v); mx=Math.max(mx,v);} }
     const amp = mx>0 && mn<Infinity ? Math.log10(mx/mn) : 0;
-    lastEdge = 1 + 0.35*Math.min(amp, 4);
+    lastEdge = 1 + 0.35*Math.min(amp, PC.edgeCap);
+    if(lastEdge > S.meta.maxEdge) S.meta.maxEdge = lastEdge;
   } else lastEdge = 1;
   lastDiversity = diversityMult(S.run.x);
+  if(lastDiversity > S.meta.maxDiv) S.meta.maxDiv = lastDiversity;
 }
 
 let curRate = 0;
@@ -426,7 +614,7 @@ function advance(realDt, catchup){
     if(events.length){ for(const [,i] of events) onExtinct(i); events.length = 0; }
   }
   // timers (real time)
-  for(let i=0;i<4;i++){
+  for(let i=0;i<N;i++){
     if(R.cull[i] > 0) R.cull[i] = Math.max(0, R.cull[i]-realDt);
     if(R.revive[i] > 0){
       R.revive[i] -= realDt;
@@ -437,10 +625,84 @@ function advance(realDt, catchup){
     }
   }
   if(R.x[3] > 0) R.apexEver = true;
+  tickEvents(realDt);
+  autoTick(realDt);
+  // 環境適応の記録・試練の達成
+  const rel = R.runTotal > 0 ? Math.log10(R.runTotal / scale()) : -1;
+  if(rel > (S.meta.wbest[S.meta.world] ?? -1)){
+    const before = mTier(S.meta.world);
+    S.meta.wbest[S.meta.world] = rel;
+    if(mTier(S.meta.world) > before && feat('mastery')){ log(`環境適応「${MASTERY[S.meta.world].name}」が段階${mTier(S.meta.world)}に到達（${MASTERY[S.meta.world].desc}）`, 'sys'); toast(`環境適応 段階${mTier(S.meta.world)}：${MASTERY[S.meta.world].name}`); recalc(); }
+  }
+  if(R.challenge && !won(R.challenge)){
+    const c = CHALLENGES.find(c=>c.id===R.challenge);
+    if(R.runTotal >= c.goal*scale()){ S.meta.challenges[c.id] = true; log(`試練「${c.name}」を達成！ 永続報酬：${c.reward}`, 'sys'); toast(`試練達成：${c.name}`); recalc(); }
+  }
   R.runTime += realDt; S.meta.playTime += realDt;
   curRate = incomeRate(R.x, R.D);
   if(curRate > R.peakRate) R.peakRate = curRate;
   if(curRate > S.meta.bestRate) S.meta.bestRate = curRate;
+}
+
+/* ============================================================
+   環境イベント
+   ============================================================ */
+function tickEvents(dt){
+  const R = S.run;
+  if(!feat('events')) return;
+  if(R.event){
+    R.event.left -= dt;
+    if(R.event.left <= 0){ log(`「${EV[R.event.id].name}」が収まった`, ''); R.event = null; R.eventCd = rand(70,130) / (mTier(5)>0 ? 1+0.25*mTier(5) : 1); recalc(); }
+  } else {
+    R.eventCd -= dt;
+    if(R.eventCd <= 0){
+      const e = EVENTS[Math.floor(Math.random()*EVENTS.length)];
+      R.event = {id:e.id, left:e.dur, obs:false};
+      if(e.start) e.start(R);
+      log(`環境イベント「${e.name}」：${e.desc}`, 'sys');
+      recalc();
+    }
+  }
+}
+function observeValue(){ return Math.max(curRate,0) * 20 * Math.pow(1.5, mTier(5)); }
+function observe(){
+  const R = S.run; if(!R.event || R.event.obs) return;
+  const g = observeValue();
+  R.event.obs = true; R.energy += g; R.runTotal += g; S.meta.observed++;
+  if(R.event.id==='whale') S.meta.sawWhale = true;
+  toast(`「${EV[R.event.id].name}」を観測 +${fmt(g)}`);
+  render(true);
+}
+
+/* ============================================================
+   自動化
+   ============================================================ */
+let autoAcc = 0;
+const autoOn = id => S.meta.fossilUp[id] && S.meta.autoOn[id];
+function autoTick(dt){
+  autoAcc += dt; if(autoAcc < 0.5) return; autoAcc = 0;
+  const R = S.run;
+  if(autoOn('aReintro')) for(let i=0;i<N;i++) if(R.unlocked[i] && canIntro(i) && R.energy >= introCost(i)) introduce(i, true);
+  if(autoOn('aCull') && hist.length > 40){
+    for(let i=1;i<N;i++){
+      if(R.x[i]<=0 || R.cull[i]>0) continue;
+      let mean = 0; for(let k=hist.length-40;k<hist.length;k++) mean += hist[k][i]; mean /= 40;
+      const prev = hist[hist.length-2][i], cur = hist[hist.length-1][i];
+      if(cur > mean*1.3 && cur < prev && speciesRisk(i) < 1.5) cull(i, true);
+    }
+  }
+  if(autoOn('aUp')){
+    for(let k=0;k<20;k++){
+      const opts = UPGRADES.filter(u=>!upBlocked(u.id) && !(u.max && R.up[u.id]>=u.max) && (u.id!=='enrich' || R.up.enrich < S.meta.autoEnrichCap));
+      const u = opts.sort((a,b)=>upCost(a)-upCost(b))[0];
+      if(!u || R.energy < upCost(u)) break;
+      buyUp(u.id, true);
+    }
+  }
+  if(autoOn('aMut')){
+    const m = MUTS.filter(m=>!m.risky && !R.muts[m.id] && mutAvailable(m)).sort((a,b)=>mutCost(a)-mutCost(b))[0];
+    if(m && R.energy >= mutCost(m)) buyMut(m.id, true);
+  }
 }
 
 /* ============================================================
@@ -451,12 +713,14 @@ function unlockCost(i){ return SPECIES[i].unlock * scale(); }
 function introCost(i){ return SPECIES[i].intro * scale() * Math.pow(1.4, S.run.up.vol*0.5); }
 function canIntro(i){
   const R = S.run;
-  if(i===3 && !has('maw')) return false;
+  if(i===3 && (!has('maw') || R.challenge==='noapex')) return false;
+  if(i===4 && !feat('worm')) return false;
   if(R.x[i] > 0 || R.revive[i] > 0) return false;
+  if(i===4) return R.D > 0.02;
   if(i>0 && R.x[i-1] <= 0) return false; // 餌がいない
   return true;
 }
-function introduce(i){
+function introduce(i, quiet){
   const R = S.run;
   if(!canIntro(i)) return;
   const cost = R.unlocked[i] ? introCost(i) : unlockCost(i);
@@ -465,41 +729,45 @@ function introduce(i){
   const first = !R.unlocked[i];
   R.unlocked[i] = true;
   R.x[i] = SPECIES[i].seed;
-  log(`${SPECIES[i].name} を${first?'導入':'再導入'}した`, 'rev');
-  recalc(); render(true);
+  if(!quiet || first) log(`${SPECIES[i].name} を${first?'導入':'再導入'}した`, 'rev');
+  recalc(); if(!quiet) render(true);
 }
 function cullValue(i){ const R=S.run; return 0.3 * R.x[i] * SPECIES[i].w * MC.y[i] * MC.global * lastDiversity * 15; }
-function cull(i){
+function cull(i, quiet){
   const R = S.run;
   if(R.x[i] <= 0 || R.cull[i] > 0) return;
   const g = cullValue(i);
-  R.x[i] *= 0.7; R.energy += g; R.runTotal += g; R.cull[i] = 6;
+  R.x[i] *= 0.7; R.energy += g; R.runTotal += g; R.cull[i] = 6; S.meta.culls++;
   vfx.cull(i);
-  toast(`${SPECIES[i].name} を間引いた +${fmt(g)}`);
-  render(true);
+  if(!quiet){ toast(`${SPECIES[i].name} を間引いた +${fmt(g)}`); render(true); }
 }
 const UPGRADES = [
-  {id:'vol',    name:'生息域拡張',  cost:L=>30*Math.pow(3.2,L), desc:'テラリウムの容積を広げる。個体数と産出×1.4。安全だが高価。', eff:L=>`産出 ×${fmt(Math.pow(1.4,L))}`},
+  {id:'vol',    name:'生息域拡張',  cost:L=>30*Math.pow(3.2,L), desc:'テラリウムの容積を広げる。個体数と産出が増える。安全だが高価。', eff:L=>`産出 ×${fmt(Math.pow(volBase(),L))}`},
   {id:'enrich', name:'富栄養化',    cost:L=>25*Math.pow(2.5,L),desc:'環境収容力+0.35、産出×1.12。上げすぎると「富栄養化のパラドックス」で波が暴れ、絶滅を招く。', eff:L=>`収容力 ${(1+0.35*L).toFixed(2)} / 産出 ×${fmt(Math.pow(1.12,L))}`, risky:true},
-  {id:'vent',   name:'熱水噴出強化', cost:L=>80*Math.pow(2.8,L), desc:'バクテリアの増殖率+8%。生産者の回復が速くなる。', eff:L=>`増殖率 ×${(1+0.08*L).toFixed(2)}`, max:20},
+  {id:'vent',   name:'熱水噴出強化', cost:L=>80*Math.pow(2.8,L), desc:'バクテリアの増殖率が上がり、生産者の回復が速くなる。', eff:L=>`増殖率 ×${(1+0.08*L*(won('rapid')?2:1)).toFixed(2)}`, max:20},
 ];
+function upBlocked(id){ const c = S.run.challenge; return (c==='barren' && id==='vol') || (c==='rapid' && id==='vent'); }
 function upCost(u){ return u.cost(S.run.up[u.id]) * scale(); }
-function buyUp(id){
+function buyUp(id, quiet){
   const u = UPGRADES.find(u=>u.id===id), R = S.run;
-  if(u.max && R.up[id] >= u.max) return;
+  if(upBlocked(id) || (u.max && R.up[id] >= u.max)) return;
   const c = upCost(u); if(R.energy < c) return;
-  R.energy -= c; R.up[id]++; recalc(); render(true);
+  R.energy -= c; R.up[id]++; recalc(); if(!quiet) render(true);
 }
-function mutCost(m){ return m.cost * scale() * Math.pow(0.7, S.meta.fossilUp.quick||0); }
-function mutAvailable(m){ return m.req.every(r=>has(r)); }
-function buyMut(id){
+function mutCost(m){ return m.cost * scale() * Math.pow(0.7, S.meta.fossilUp.quick||0) * (won('nomut')?0.5:1); }
+function mutAvailable(m){
+  if(m.b==='wrm' && !feat('worm')) return false;
+  if(mutBlocked(m.id)) return false;
+  return m.req.every(r=>has(r));
+}
+function buyMut(id, quiet){
   const m = MUT[id], R = S.run;
   if(has(id) || !mutAvailable(m)) return;
   const c = mutCost(m); if(R.energy < c) return;
   R.energy -= c; R.muts[id] = true;
   log(`突然変異「${m.name}」が発現した`, 'mut');
   if(id==='maw') log('深淵の底から巨大な顎が現れる…（アンコウを導入可能）', 'sys');
-  recalc(); render(true);
+  recalc(); if(!quiet) render(true);
 }
 
 // 大絶滅
@@ -508,20 +776,63 @@ function prestigeGain(){
   const R = S.run;
   if(R.runTotal < prestigeReq()) return 0;
   const base = Math.pow(R.runTotal / prestigeReq(), 0.5);
-  return Math.floor(base * world().fossil * (R.apexEver ? 1.5 : 1));
+  return Math.floor(base * world().fossil * (R.apexEver ? 1.5 : 1) * Math.pow(1.25, mTier(2)) * Math.pow(2, S.meta.starUp.rain||0));
 }
 let selWorld = null;
-function doPrestige(){
-  const g = prestigeGain(); if(g <= 0) return;
-  const target = selWorld ?? S.meta.world;
-  if(WORLDS[target].req > S.meta.fossilsEarned + g) return;
-  S.meta.fossils += g; S.meta.fossilsEarned += g; S.meta.prestiges++;
-  const prevW = world().name;
-  S.meta.world = target;
+function newRun(challenge){
   S.run = freshRun(S.meta);
+  if(challenge){
+    S.run.challenge = challenge;
+    if(challenge==='nomut') S.run.muts = {};
+    if(challenge==='glut'){ GLUT_BLOCK.forEach(m=>delete S.run.muts[m]); S.run.up.enrich = 12; }
+    if(challenge==='barren') S.run.up.vol = 0;
+  }
   hist = []; histAcc = 0; vfx.reset();
-  log(`大絶滅。化石遺伝子 ${fmt(g)} を回収し「${world().name}」へ播種した（前: ${prevW}）`, 'sys');
-  selWorld = null; closeModal(); recalc(); render(true); save();
+}
+function featSnapshot(){ return FEATURES.map(f=>f.cond(S.meta)); }
+function announceFeatures(before){
+  FEATURES.forEach((f,k)=>{ if(!before[k] && f.cond(S.meta)){ log(`新たな機能が解放された：「${f.name}」— ${f.desc}`, 'sys'); openModal(`<h3>新機能解放：${f.name}</h3><p style="font-size:13px;color:var(--dim);line-height:1.6">${f.desc}</p><button class="btn primary" style="width:100%" onclick="closeModal()">深淵へ戻る</button>`); } });
+}
+function gainFossils(g){
+  S.meta.fossils += g; S.meta.fossilsEarned += g; S.meta.prestiges++;
+  if(S.run.runTime < 600) S.meta.fastPrest = true;
+}
+function doPrestige(challenge){
+  const g = prestigeGain(); if(g <= 0 && !challenge) return;
+  const target = challenge ? S.meta.world : (selWorld ?? S.meta.world);
+  if(WORLDS[target].req > S.meta.fossilsEarned + g) return;
+  const before = featSnapshot();
+  if(g > 0) gainFossils(g);
+  const prevW = world().name;
+  S.meta.world = target; S.meta.maxWorld = Math.max(S.meta.maxWorld, target);
+  closeModal();
+  newRun(challenge);
+  if(g > 0) log(`大絶滅。化石遺伝子 ${fmt(g)} を回収し「${world().name}」へ播種した（前: ${prevW}）`, 'sys');
+  if(challenge) log(`試練「${CHALLENGES.find(c=>c.id===challenge).name}」を開始した`, 'sys');
+  announceFeatures(before);
+  selWorld = null; recalc(); checkAch(); render(true); save();
+}
+function abandonChallenge(){
+  closeModal(); newRun(null); log('試練を放棄した', 'ext'); recalc(); render(true);
+}
+function doPansp(){
+  const g = panspGain(); if(g <= 0) return;
+  const before = featSnapshot();
+  const M = S.meta;
+  M.stars += g; M.starsEarned += g; M.pansp++;
+  const keepAuto = M.starUp.autokeep;
+  const fu = {}; if(keepAuto) AUTO_IDS.forEach(a=>{ if(M.fossilUp[a]) fu[a]=1; });
+  M.fossils = 0; M.fossilsEarned = 0; M.fossilUp = fu; M.world = 0;
+  closeModal(); newRun(null);
+  log(`彗星播種。星の種 ${g} を宇宙へ放ち、原初の海からやり直す`, 'sys');
+  announceFeatures(before);
+  recalc(); checkAch(); render(true); save();
+}
+function buyStar(id){
+  const f = STAR_UP.find(f=>f.id===id), L = S.meta.starUp[id]||0;
+  if(L >= f.max) return; const c = f.cost(L); if(S.meta.stars < c) return;
+  S.meta.stars -= c; S.meta.starUp[id] = L+1;
+  log(`星の種で「${f.name}」を強化 (Lv${L+1})`, 'sys'); recalc(); render(true);
 }
 function buyFossil(id){
   const f = FOSSIL_UP.find(f=>f.id===id), L = S.meta.fossilUp[id]||0;
@@ -560,11 +871,16 @@ function save(){
 function sanitize(o){
   const base = freshState();
   const s = Object.assign(base, o);
-  s.meta = Object.assign(freshState().meta, o.meta||{});
-  s.meta.fossilUp = s.meta.fossilUp || {};
+  s.meta = Object.assign(META_DEFAULT(), o.meta||{});
+  for(const k of ['fossilUp','wbest','ach','challenges','starUp']) s.meta[k] = s.meta[k] || {};
+  s.meta.autoOn = Object.assign(META_DEFAULT().autoOn, s.meta.autoOn||{});
+  s.meta.maxWorld = Math.max(s.meta.maxWorld||0, s.meta.world||0);
   s.run = Object.assign(freshRun(s.meta), o.run||{});
   s.run.up = Object.assign({vol:0,enrich:0,vent:0}, s.run.up);
-  s.run.x = (s.run.x||[0.4,0,0,0]).map(v=>isFinite(v)&&v>=0?v:0);
+  const pad = (a, d) => { a = Array.isArray(a) ? a.slice(0,N) : []; while(a.length < N) a.push(d); return a; };
+  s.run.x = pad(s.run.x, 0).map(v=>isFinite(v)&&v>=0?v:0);
+  s.run.unlocked = pad(s.run.unlocked, false); s.run.revive = pad(s.run.revive, 0); s.run.cull = pad(s.run.cull, 0); s.run.brink = pad(s.run.brink, 0);
+  if(s.run.event && !EV[s.run.event.id]) s.run.event = null;
   if(!isFinite(s.run.energy)) s.run.energy = 0;
   if(!(s.meta.world in WORLDS)) s.meta.world = 0;
   s.log = Array.isArray(o.log) ? o.log : [];
@@ -616,8 +932,8 @@ function resize(){
   const c = chart.getBoundingClientRect(); CW = c.width; CH = c.height;
   chart.width = CW*DPR; chart.height = CH*DPR;
 }
-const NMAX = [140, 60, 26, 6];
-const parts = [[],[],[],[]];
+const NMAX = [140, 60, 26, 6, 24];
+const parts = [[],[],[],[],[]];
 let snow = [], fx = [];
 const rand = (a,b)=>a+Math.random()*(b-a);
 function newPart(i, x, y){
@@ -625,6 +941,7 @@ function newPart(i, x, y){
   if(i===0){ p.y = y ?? rand(TH*0.3, TH*0.95); }
   if(i===2){ p.vx = p.dir*rand(15,30); }
   if(i===3){ p.vx = p.dir*rand(6,12); p.y = y ?? rand(TH*0.4, TH*0.85); }
+  if(i===4){ p.x = x ?? rand(TW*0.05, TW*0.95); p.y = TH - rand(12, 26); p.h = rand(6,12); }
   return p;
 }
 const vfx = {
@@ -677,7 +994,7 @@ function drawTank(){
   }
 
   // 生物
-  for(let i=0;i<4;i++){
+  for(let i=0;i<N;i++){
     const arr = parts[i], tgt = targetCount(i);
     if(arr.length < tgt){ const add = Math.min(tgt-arr.length, i===0?6:2); for(let k=0;k<add;k++){
       // 新個体は既存個体の近くで誕生（分裂・産卵っぽく）
@@ -708,6 +1025,8 @@ function movePart(i, p, dt){
   else if(i===2){
     if(Math.random()<dt*0.3){ p.dir *= -1; }
     p.vx += (p.dir*24*p.s - p.vx)*dt*1.5; p.x += p.vx*dt; p.y += Math.sin(tAnim*1.5+p.ph)*dt*10;
+  } else if(i===4){
+    return;
   } else {
     if(Math.random()<dt*0.08) p.dir *= -1;
     p.vx += (p.dir*9 - p.vx)*dt*0.5; p.x += p.vx*dt; p.y += Math.sin(tAnim*0.4+p.ph)*dt*5;
@@ -729,6 +1048,12 @@ function drawPart(c, i, p){
     const sw = Math.sin(tAnim*6+p.ph)*0.4;
     c.moveTo(0,-3); c.lineTo(-5,-1+sw); c.moveTo(0,-3); c.lineTo(5,-1-sw); c.stroke();
     c.restore();
+  } else if(i===4){
+    const sw = Math.sin(tAnim*1.6+p.ph)*2.5;
+    c.strokeStyle = 'rgba(230,220,200,0.55)'; c.lineWidth = 1.6;
+    c.beginPath(); c.moveTo(p.x, p.y+p.h*0.6); c.quadraticCurveTo(p.x+sw*0.3, p.y, p.x+sw, p.y-p.h*0.4); c.stroke();
+    c.fillStyle = hexA(col, 0.85);
+    for(let k=0;k<4;k++){ const a = -1.9 + k*0.5 + Math.sin(tAnim*2+p.ph+k)*0.15; c.beginPath(); c.ellipse(p.x+sw+Math.cos(a)*3.2, p.y-p.h*0.4+Math.sin(a)*3.2, 2.6, 1, a, 0, 6.283); c.fill(); }
   } else if(i===2){
     const d = p.vx >= 0 ? 1 : -1, s = 4.2*p.s;
     c.save(); c.translate(p.x,p.y); c.scale(d,1);
@@ -785,7 +1110,7 @@ function drawChart(){
   c.fillStyle = '#4b6378'; c.fillText(`過去${Math.round(HIST_LEN*HIST_DT)}秒`, pad.l+2, CH-2);
   if(hist.length < 2) return;
   const dx = w / (HIST_LEN-1), off = HIST_LEN - hist.length;
-  for(let i=0;i<4;i++){
+  for(let i=0;i<N;i++){
     c.strokeStyle = SPECIES[i].color; c.lineWidth = 1.6; c.beginPath();
     let pen = false;
     for(let k=0;k<hist.length;k++){
@@ -815,7 +1140,7 @@ function speciesRisk(i){
   return 0;
 }
 function dangerLevel(){
-  let d = 0; for(let i=0;i<4;i++) d = Math.max(d, speciesRisk(i));
+  let d = 0; for(let i=0;i<N;i++) d = Math.max(d, speciesRisk(i));
   if(S.run.x.every(v=>v<=0)) return 3;
   return d;
 }
@@ -837,14 +1162,15 @@ function buildSpecies(){
         <button class="btn" id="spCu${sp.id}" onclick="cull(${sp.id})"></button>
       </div>
     </div>`).join('');
-  $('legend').innerHTML = SPECIES.map(sp=>`<span><i style="background:${sp.color}"></i>${sp.name}</span>`).join('') + `<span style="color:var(--danger)">┄ 絶滅ライン</span>`;
+  $('legend').innerHTML = SPECIES.map(sp=>`<span id="lg${sp.id}"><i style="background:${sp.color}"></i>${sp.name}</span>`).join('') + `<span style="color:var(--danger)">┄ 絶滅ライン</span>`;
 }
-function popCount(i){ return S.run.x[i] * SPECIES[i].perUnit * Math.pow(1.4, S.run.up.vol) * scale(); }
+function popCount(i){ return S.run.x[i] * SPECIES[i].perUnit * Math.pow(volBase(), S.run.up.vol) * scale(); }
 function updateSpecies(){
   const R = S.run;
   const yMin = Math.log10(PC.thr) - 0.5, yMax = 1.2;
   for(const sp of SPECIES){
     const i = sp.id, v = R.x[i], el = $('sp'+i);
+    if(i===4){ el.hidden = !feat('worm'); $('lg4').hidden = !feat('worm'); if(el.hidden) continue; }
     const risk = speciesRisk(i);
     el.classList.toggle('extinct', v<=0);
     el.classList.toggle('danger', risk>=2);
@@ -865,7 +1191,9 @@ function updateSpecies(){
       else if(risk>=1.5) meta = '⚠ 谷が深い ' + meta;
       if(i===0 && PC.floorB) meta += '（休眠胞子）';
     } else if(R.revive[i]>0) meta = `休眠体… 復活まで ${Math.ceil(R.revive[i])}秒`;
+    else if(i===3 && R.challenge==='noapex') meta = '試練により封印されている';
     else if(i===3 && !has('maw')) meta = '突然変異「深淵の顎」で解放';
+    else if(i===4) meta = R.D>0.02 ? '死骸（マリンスノー）を食べる分解者' : '死骸が足りない';
     else if(i>0 && R.x[i-1]<=0) meta = '餌となる種がいない';
     $('spMeta'+i).textContent = meta;
     const inBtn = $('spIn'+i), cuBtn = $('spCu'+i);
@@ -879,12 +1207,20 @@ function updateSpecies(){
 
 function renderEnv(){
   const R = S.run;
+  const autos = AUTO_IDS.filter(a=>S.meta.fossilUp[a]);
+  const autoHtml = autos.length ? `<div class="section-t">自動化遺伝子</div>` + autos.map(a=>{
+    const f = FOSSIL_UP.find(f=>f.id===a), on = S.meta.autoOn[a];
+    const extra = a==='aUp' ? `<div class="e">富栄養化の自動上限：Lv${S.meta.autoEnrichCap}
+      <button class="chip" data-cap="-1">−</button><button class="chip" data-cap="1">＋</button></div>` : '';
+    return `<div class="row"><div class="info"><div class="t">${f.name}</div><div class="d">${f.desc(1)}</div>${extra}</div>
+      <button class="btn toggle-btn ${on?'primary':''}" data-auto="${a}">${on?'ON':'OFF'}</button></div>`;
+  }).join('') : '';
   $('p-env').innerHTML = UPGRADES.map(u=>{
-    const L = R.up[u.id], c = upCost(u), max = u.max && L>=u.max;
+    const L = R.up[u.id], c = upCost(u), max = u.max && L>=u.max, blk = upBlocked(u.id);
     return `<div class="row"><div class="info"><div class="t">${u.name} <span style="color:var(--faint);font-weight:400">Lv${L}</span>${u.risky?' <span style="color:var(--warn)">⚠</span>':''}</div>
       <div class="d">${u.desc}</div><div class="e">${u.eff(L)}</div></div>
-      <button class="btn primary" data-up="${u.id}" ${max||R.energy<c?'disabled':''}>${max?'最大':'強化'}<small>${max?'':fmt(c)+' E'}</small></button></div>`;
-  }).join('') + `
+      <button class="btn primary" data-up="${u.id}" ${max||blk||R.energy<c?'disabled':''}>${blk?'封印':max?'最大':'強化'}<small>${blk?'試練中':max?'':fmt(c)+' E'}</small></button></div>`;
+  }).join('') + autoHtml + `
     <div class="section-t">生態系パラメータ</div>
     <div class="kv">
       <div>環境収容力 K</div><div>${PC.K.toFixed(2)}</div>
@@ -898,19 +1234,21 @@ function renderEnv(){
       ピーク時の捕食者を「間引き」すると波を抑えつつ収穫できる。頂点捕食者や共食いは系を安定させる。
       生産者の振幅が大きいほど「臨界ボーナス」が上がる。</p>`;
   $('p-env').querySelectorAll('[data-up]').forEach(b=>b.onclick=()=>buyUp(b.dataset.up));
+  $('p-env').querySelectorAll('[data-auto]').forEach(b=>b.onclick=()=>{ S.meta.autoOn[b.dataset.auto] = !S.meta.autoOn[b.dataset.auto]; render(true); });
+  $('p-env').querySelectorAll('[data-cap]').forEach(b=>b.onclick=()=>{ S.meta.autoEnrichCap = Math.max(0, Math.min(40, S.meta.autoEnrichCap + +b.dataset.cap)); render(true); });
 }
 function updateEnvButtons(){
   $('p-env').querySelectorAll('[data-up]').forEach(b=>{
     const u = UPGRADES.find(u=>u.id===b.dataset.up); const L=S.run.up[u.id];
-    b.disabled = (u.max && L>=u.max) || S.run.energy < upCost(u);
+    b.disabled = upBlocked(u.id) || (u.max && L>=u.max) || S.run.energy < upCost(u);
   });
 }
 function renderMut(){
-  const html = BRANCHES.map(br=>{
+  const html = BRANCHES.filter(br=>!br.feat || feat(br.feat)).map(br=>{
     const ms = MUTS.filter(m=>m.b===br.id);
     return `<div class="branch"><h4>${br.name}</h4>` + ms.map((m,k)=>{
       const own = has(m.id), av = mutAvailable(m);
-      const reqTxt = !av ? `<div class="md" style="color:var(--faint)">要: ${m.req.map(r=>MUT[r].name).join('・')}</div>` : '';
+      const reqTxt = mutBlocked(m.id) ? `<div class="md" style="color:var(--danger)">試練により封印</div>` : !av ? `<div class="md" style="color:var(--faint)">要: ${m.req.map(r=>MUT[r].name).join('・')}</div>` : '';
       return (k?'<div class="arrow">▼</div>':'') + `<button class="mut ${own?'owned':''} ${!av?'locked':''} ${m.risky?'risky':''}" data-mut="${m.id}">
         <div class="mt">${m.name}</div><div class="md">${m.desc}</div>${reqTxt}
         <div class="mc">${own?'発現済み':fmt(mutCost(m))+' E'}</div></button>`;
@@ -935,9 +1273,11 @@ function renderExt(){
       <div class="wd">${w.desc}</div>
       <div class="wd" style="color:var(--gene)">規模 ×${fmt(w.scale)} ／ 化石×${w.fossil}</div>
       ${ok?'':`<div class="wd">累計化石遺伝子 ${fmt(w.req)} で解放</div>`}
+      ${feat('mastery')?`<div class="wd">適応 <span class="stars">${'★'.repeat(mTier(w.id))}${'☆'.repeat(3-mTier(w.id))}</span> ${MASTERY[w.id].name}</div>
+        <div class="wd">${MASTERY[w.id].desc}/段 ・ 次: 累計 ${mTier(w.id)<3?fmt(Math.pow(10,MASTERY_T[mTier(w.id)])*w.scale):'達成'}</div>`:''}
     </button>`;
   }).join('');
-  const fups = FOSSIL_UP.map(f=>{
+  const fups = FOSSIL_UP.filter(f=>!f.auto || feat('auto')).map(f=>{
     const L = M.fossilUp[f.id]||0, max = L>=f.max, c = max?0:f.cost(L);
     return `<div class="row"><div class="info"><div class="t">${f.name} <span style="color:var(--faint);font-weight:400">Lv${L}${isFinite(f.max)?'/'+f.max:''}</span></div>
       <div class="d">${f.desc(L)}</div></div>
@@ -956,9 +1296,18 @@ function renderExt(){
     <div class="section-t">次の播種先</div>
     <div class="worlds">${worlds}</div>
     <div class="section-t">化石遺伝子の進化（永続）</div>
-    ${fups}`;
+    ${fups}
+    ${panspHtml()}`;
   $('p-ext').querySelectorAll('[data-w]').forEach(b=>b.onclick=()=>{ selWorld = +b.dataset.w; renderExt(); });
   $('p-ext').querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>buyFossil(b.dataset.f));
+  $('p-ext').querySelectorAll('[data-star]').forEach(b=>b.onclick=()=>buyStar(b.dataset.star));
+  const pb = $('btnPansp'); if(pb) pb.onclick = ()=>{
+    const g = panspGain(); if(g<=0) return;
+    openModal(`<h3>彗星播種を行いますか？</h3>
+      <p style="font-size:13px;color:var(--dim);line-height:1.6">化石遺伝子・化石の進化・到達した環境が全て失われ、原初の海からやり直します。<br>
+      実績・環境適応・試練の報酬・星の種は残ります。<br>獲得: <b style="color:var(--gene)">星の種 ${g}</b></p>
+      <div class="btns"><button class="btn" onclick="closeModal()">やめる</button><button class="btn dangerb" onclick="doPansp()">宇宙へ放つ</button></div>`);
+  };
   $('btnPrestige').onclick = ()=>{
     const g = prestigeGain(); if(g<=0) return;
     openModal(`<h3>大絶滅を起こしますか？</h3>
@@ -966,6 +1315,77 @@ function renderExt(){
       獲得: <b style="color:var(--gene)">${fmt(g)} 化石遺伝子</b><br>播種先: <b>${WORLDS[selWorld ?? S.meta.world].name}</b></p>
       <div class="btns"><button class="btn" onclick="closeModal()">やめる</button><button class="btn dangerb" onclick="doPrestige()">滅ぼす</button></div>`);
   };
+}
+function panspHtml(){
+  if(!feat('pansp')) return '';
+  const M = S.meta, g = panspGain();
+  const ups = STAR_UP.map(f=>{
+    const L = M.starUp[f.id]||0, max = L>=f.max, c = max?0:f.cost(L);
+    return `<div class="row"><div class="info"><div class="t">${f.name} <span style="color:var(--faint);font-weight:400">Lv${L}${isFinite(f.max)?'/'+f.max:''}</span></div>
+      <div class="d">${f.desc(L)}</div></div>
+      <button class="btn" data-star="${f.id}" ${max||M.stars<c?'disabled':''}>${max?'最大':'強化'}<small>${max?'':c+' 星'}</small></button></div>`;
+  }).join('');
+  return `<div class="section-t">彗星播種（第二の転生）</div>
+    <div class="prestige" style="border-color:#3a4f8a;background:linear-gradient(180deg,#0d1430,#070a18)">
+      <div class="big" style="color:#9fc0ff">+${g} 星の種 <span style="font-size:13px;color:var(--dim)">（保有 ${M.stars}）</span></div>
+      <div style="font-size:11px;color:var(--dim);margin:4px 0 10px;line-height:1.5">累計化石遺伝子 ${fmt(M.fossilsEarned)}（300で1個、以降は平方根で増加）<br>未使用の星の種1つにつき全産出+10%。</div>
+      <button class="btn dangerb" id="btnPansp" style="width:100%" ${g>0?'':'disabled'}>彗星播種を行う</button>
+    </div>
+    <div style="margin-top:6px">${ups}</div>`;
+}
+function renderChal(){
+  const R = S.run, M = S.meta, cur = R.challenge;
+  let head = '';
+  if(cur){
+    const c = CHALLENGES.find(c=>c.id===cur), goal = c.goal*scale(), pct = Math.min(1, R.runTotal/goal);
+    head = `<div class="prestige" style="margin-bottom:10px"><div style="font-size:12px;color:var(--dim)">挑戦中の試練</div>
+      <div class="big" style="font-size:18px">${c.name} ${won(cur)?'<span class="chip ok">達成済み</span>':''}</div>
+      <div class="d" style="font-size:11px;color:var(--dim)">${c.desc}</div>
+      <div class="progress"><b id="chalBar" style="width:${(pct*100).toFixed(1)}%"></b></div>
+      <div style="font-size:11px;color:var(--dim)" id="chalTxt">累計 ${fmt(R.runTotal)} / ${fmt(goal)}</div>
+      <div style="font-size:11px;color:var(--dim);margin:6px 0">大絶滅すると試練は終了する（化石遺伝子は通常通り獲得）。</div>
+      <button class="btn" style="width:100%" onclick="openModal('<h3>試練を放棄しますか？</h3><p style=&quot;font-size:13px;color:var(--dim)&quot;>現在の生態系はリセットされ、化石遺伝子は得られません。</p><div class=&quot;btns&quot;><button class=&quot;btn&quot; onclick=&quot;closeModal()&quot;>やめる</button><button class=&quot;btn dangerb&quot; onclick=&quot;abandonChallenge()&quot;>放棄する</button></div>')">試練を放棄する</button></div>`;
+  }
+  $('p-chal').innerHTML = head + `<p style="font-size:11px;color:var(--faint);line-height:1.6;margin:0 0 8px">制限付きの生態系で目標の累計エネルギーに到達すると、永続報酬を得る。開始すると現在の生態系は終了する（大絶滅可能なら化石遺伝子も獲得）。目標は現在の環境の規模に比例する。</p>` +
+    CHALLENGES.map(c=>`<div class="row"><div class="info"><div class="t">${c.name} ${won(c.id)?'<span class="chip ok">達成</span>':''}</div>
+      <div class="d">${c.desc}</div><div class="d">目標：累計 ${fmt(c.goal*scale())}</div><div class="e">報酬：${c.reward}</div></div>
+      <button class="btn ${cur===c.id?'':'primary'}" data-ch="${c.id}" ${cur?'disabled':''}>${cur===c.id?'挑戦中':'挑戦する'}<small>${won(c.id)?'再挑戦':''}</small></button></div>`).join('');
+  $('p-chal').querySelectorAll('[data-ch]').forEach(b=>b.onclick=()=>{
+    const c = CHALLENGES.find(c=>c.id===b.dataset.ch), g = prestigeGain();
+    openModal(`<h3>試練「${c.name}」</h3><p style="font-size:13px;color:var(--dim);line-height:1.6">${c.desc}<br>目標：累計 ${fmt(c.goal*scale())}<br>報酬：${c.reward}<br><br>現在の生態系は終了する。${g>0?`化石遺伝子 <b style="color:var(--gene)">${fmt(g)}</b> を獲得する。`:'化石遺伝子は得られない。'}</p>
+      <div class="btns"><button class="btn" onclick="closeModal()">やめる</button><button class="btn dangerb" onclick="doPrestige('${c.id}')">挑む</button></div>`);
+  });
+}
+function progressParts(){
+  const M = S.meta;
+  const tiers = WORLDS.reduce((a,w)=>a+mTier(w.id),0);
+  return [
+    ['実績', achCount(), ACHS.length],
+    ['到達した環境', M.maxWorld+1, WORLDS.length],
+    ['環境適応', tiers, WORLDS.length*3],
+    ['試練', Object.keys(M.challenges).length, CHALLENGES.length],
+    ['解放した機能', FEATURES.filter(f=>f.cond(M)).length, FEATURES.length],
+  ];
+}
+let achSeen = -1;
+function renderAch(){
+  const parts = progressParts();
+  const overall = parts.reduce((a,[,v,t])=>a+v/t,0)/parts.length;
+  const cats = [...new Set(ACHS.map(a=>a.cat))];
+  $('p-ach').innerHTML = `
+    <div class="overall">
+      <div style="font-size:12px;color:var(--dim)">深淵の総合進捗</div>
+      <div class="big">${(overall*100).toFixed(1)}%</div>
+      <div class="progress"><b style="width:${(overall*100).toFixed(1)}%"></b></div>
+      ${parts.map(([n,v,t])=>`<div class="prow"><span>${n}</span><div class="progress"><b style="width:${(v/t*100).toFixed(1)}%"></b></div><span>${v} / ${t}</span></div>`).join('')}
+      <div style="font-size:12px;margin-top:8px">実績ボーナス：<b style="color:var(--gene)">全産出 ×${(1+ACH_BONUS*achCount()).toFixed(2)}</b> <span style="color:var(--faint);font-size:11px">（実績1つにつき+${ACH_BONUS*100}%）</span></div>
+    </div>
+    <div class="section-t">進化の道（解放される機能）</div>
+    <div class="road">${FEATURES.map(f=>{ const on = f.cond(S.meta);
+      return `<div class="rf ${on?'on':''}"><div class="ri">${on?'✔':'🔒'}</div><div><b>${f.name}</b> <span class="chip ${on?'ok':''}">${on?'解放済み':f.req}</span><div class="rd">${f.desc}</div></div></div>`; }).join('')}</div>
+    ${cats.map(c=>`<div class="section-t">${c}（${ACHS.filter(a=>a.cat===c&&S.meta.ach[a.id]).length}/${ACHS.filter(a=>a.cat===c).length}）</div>
+      <div class="achs">${ACHS.filter(a=>a.cat===c).map(a=>`<div class="ach ${S.meta.ach[a.id]?'got':''}"><div class="an">${S.meta.ach[a.id]?'🏆 ':''}${a.name}</div><div class="ad">${a.desc}</div></div>`).join('')}</div>`).join('')}`;
+  achSeen = achCount();
 }
 function renderLog(){
   $('log').innerHTML = S.log.map(l=>`<div class="${l.cls||''}"><span style="color:var(--faint)">[${l.t}]</span> ${l.msg}</div>`).join('') || '<div>まだ記録はない。</div>';
@@ -982,17 +1402,23 @@ function renderStats(){
     <div>大絶滅の回数</div><div>${M.prestiges}</div>
     <div>累計化石遺伝子</div><div>${fmt(M.fossilsEarned)}</div>
     <div>史上最高産出</div><div>${fmt(M.bestRate)}/秒</div>
+    <div>累計絶滅</div><div>${M.totalExt}</div>
+    <div>累計間引き</div><div>${M.culls}</div>
+    <div>イベント観測</div><div>${M.observed}</div>
+    <div>彗星播種</div><div>${M.pansp}（星の種 累計${M.starsEarned}）</div>
     <div>総プレイ時間</div><div>${fmtT(M.playTime)}</div>`;
 }
 function goalText(){
   const R = S.run;
+  if(R.challenge){ const c = CHALLENGES.find(c=>c.id===R.challenge); return won(c.id) ? `試練「<b>${c.name}</b>」達成！ 大絶滅で試練を終えよう。` : `試練「<b>${c.name}</b>」：累計 ${fmt(R.runTotal)} / <b>${fmt(c.goal*scale())}</b>（${(R.runTotal/(c.goal*scale())*100).toFixed(1)}%）`; }
   if(!R.unlocked[1]) return `目標：<b>動物プランクトン</b>を導入して食物連鎖を伸ばそう（${fmt(unlockCost(1))} E）`;
   if(!R.unlocked[2]) return `目標：<b>小型魚</b>を導入しよう。増えすぎたプランクトンがバクテリアを食い尽くす前に。`;
   if(!has('cannibal') && R.extinctions>0) return `ヒント：魚が増えすぎて崩壊するなら、突然変異「<b>共食い</b>」で自己制御を。`;
   if(!has('maw')) return `目標：突然変異「<b>深淵の顎</b>」で頂点捕食者を解き放て。`;
   if(!R.unlocked[3]) return `目標：<b>チョウチンアンコウ</b>を導入し、栄養カスケードで系を安定させよう。`;
   if(R.runTotal < prestigeReq()) return `目標：累計エネルギー <b>${fmt(prestigeReq())}</b> で大絶滅が可能になる（${(R.runTotal/prestigeReq()*100).toFixed(1)}%）`;
-  return `大絶滅が可能。富栄養化で波を限界まで高めてから滅ぼすほど、化石遺伝子は多く残る。`;
+  const nf = FEATURES.find(f=>!f.cond(S.meta));
+  return `大絶滅が可能。波を限界まで高めてから滅ぼすほど化石遺伝子は多く残る。${nf?`<br>次に解放：<b>${nf.name}</b>（${nf.req}）`:''}`;
 }
 
 let lastStruct = '';
@@ -1001,7 +1427,7 @@ function render(force){
   // ヘッダー
   $('sEnergy').textContent = fmt(R.energy) + ' E';
   $('sRate').textContent = '+' + fmt(curRate) + ' /秒';
-  let tot = 0; for(let i=0;i<4;i++) tot += popCount(i);
+  let tot = 0; for(let i=0;i<N;i++) tot += popCount(i);
   $('sPop').textContent = fmt(tot);
   $('sWorld').textContent = world().name;
   $('sBonus').textContent = '×' + (lastDiversity*lastEdge).toFixed(2);
@@ -1014,16 +1440,25 @@ function render(force){
   const d = dangerLevel(), al = $('alarm');
   const lbl = d>=3 ? ['生態系崩壊','var(--danger)'] : d>=2 ? ['崩壊寸前','var(--danger)'] : d>=1.5 ? ['危険な振動','var(--warn)'] : d>=1 ? ['振動中','#9fd3ff'] : ['安定','var(--good)'];
   al.textContent = lbl[0]; al.style.color = lbl[0]==='崩壊寸前' && Math.floor(tAnim*3)%2 ? '#fff' : lbl[1];
-  $('tankInfo').textContent = `${world().en}  ·  死骸 ${fmt(R.D*1e6*Math.pow(1.4,R.up.vol)*scale())}`;
+  $('tankInfo').textContent = `${world().en}  ·  死骸 ${fmt(R.D*1e6*Math.pow(volBase(),R.up.vol)*scale())}${R.challenge?'  ·  試練中':''}`;
   updateSpecies();
   // タブ再構築（構造が変わったとき）
-  const struct = JSON.stringify([R.up, Object.keys(R.muts).length, S.meta.fossilUp, S.meta.world, selWorld, curTab, g>0, S.meta.fossils]);
+  // イベント
+  const eb = $('eventBar');
+  if(R.event){ const e = EV[R.event.id]; eb.hidden = false; $('evName').textContent = `環境イベント：${e.name}（残り${Math.ceil(R.event.left)}秒）`; $('evDesc').textContent = e.desc;
+    const b = $('evBtn'); b.disabled = R.event.obs; b.innerHTML = R.event.obs ? '観測済み' : `観測する<small>+${fmt(observeValue())}</small>`; }
+  else eb.hidden = true;
+  $('tabChal').hidden = !feat('chal');
+  const struct = JSON.stringify([R.up, Object.keys(R.muts).length, S.meta.fossilUp, S.meta.world, selWorld, curTab, g>0, S.meta.fossils, R.challenge, achCount(), S.meta.stars, S.meta.starUp, S.meta.autoOn, S.meta.autoEnrichCap, S.meta.challenges, featSnapshot(), WORLDS.map(w=>mTier(w.id)), panspGain()]);
   if(force || struct !== lastStruct){
     lastStruct = struct;
     if(curTab==='env') renderEnv();
     if(curTab==='mut') renderMut();
     if(curTab==='ext') renderExt();
+    if(curTab==='chal') renderChal();
+    if(curTab==='ach') renderAch();
   }
+  if(curTab==='chal' && R.challenge && $('chalBar')){ const goal = CHALLENGES.find(c=>c.id===R.challenge).goal*scale(); $('chalBar').style.width = (Math.min(1,R.runTotal/goal)*100).toFixed(1)+'%'; $('chalTxt').textContent = `累計 ${fmt(R.runTotal)} / ${fmt(goal)}`; }
   if(curTab==='env') updateEnvButtons();
   if(curTab==='mut') updateMutAfford();
   if(curTab==='ext'){ const b=$('btnPrestige'); if(b) b.disabled = g<=0; $('p-ext').querySelectorAll('[data-f]').forEach(b=>{const f=FOSSIL_UP.find(f=>f.id===b.dataset.f),L=S.meta.fossilUp[f.id]||0; b.disabled = L>=f.max || S.meta.fossils < f.cost(L);}); }
@@ -1031,7 +1466,9 @@ function render(force){
   // バッジ
   $('bEnv').classList.toggle('show', UPGRADES.some(u=>!(u.max && R.up[u.id]>=u.max) && R.energy>=upCost(u)));
   $('bMut').classList.toggle('show', MUTS.some(m=>!has(m.id)&&mutAvailable(m)&&R.energy>=mutCost(m)));
-  $('bExt').classList.toggle('show', g>0 || FOSSIL_UP.some(f=>(S.meta.fossilUp[f.id]||0)<f.max && S.meta.fossils>=f.cost(S.meta.fossilUp[f.id]||0)));
+  $('bExt').classList.toggle('show', g>0 || FOSSIL_UP.some(f=>(!f.auto||feat('auto')) && (S.meta.fossilUp[f.id]||0)<f.max && S.meta.fossils>=f.cost(S.meta.fossilUp[f.id]||0)) || panspGain()>0);
+  $('bAch').classList.toggle('show', achSeen>=0 && achCount()>achSeen && curTab!=='ach');
+  $('bChal').classList.toggle('show', !R.challenge && CHALLENGES.some(c=>!won(c.id)) && feat('chal') && curTab!=='chal');
 }
 
 /* ============================================================
@@ -1049,6 +1486,7 @@ document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
   document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on', x===t));
   document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('on', p.id==='p-'+curTab));
   if(curTab==='log') logDirty = true;
+  if(curTab==='ach') achSeen = achCount();
   render(true);
 });
 $('btnSave').onclick = ()=>{ save(); toast('保存した'); };
@@ -1092,6 +1530,8 @@ setInterval(()=>{
 }, 50);
 setInterval(()=>render(false), 200);
 setInterval(save, 10000);
+setInterval(checkAch, 1000);
+achSeen = achCount();
 window.addEventListener('beforeunload', save);
 document.addEventListener('visibilitychange', ()=>{ if(document.hidden) save(); });
 (function loop(){ drawTank(); drawChart(); requestAnimationFrame(loop); })();
