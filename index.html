@@ -17,9 +17,10 @@
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#03070d; } }
 :root[data-theme="dark"]{ --bg:#03070d; }
 *{box-sizing:border-box}
+:root{color-scheme:dark}
 html,body{margin:0;background:var(--bg);color:var(--text);font-family:"Hiragino Sans","Noto Sans JP","Yu Gothic UI",system-ui,sans-serif;font-size:14px;-webkit-tap-highlight-color:transparent}
 button{font:inherit;color:inherit;cursor:pointer}
-.app{max-width:1280px;margin:0 auto;padding:12px 16px 40px}
+.app{max-width:1280px;margin:0 auto;padding-block:12px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 header{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 20px;margin-bottom:10px}
 h1{margin:0;font-size:20px;letter-spacing:.12em;font-weight:800;background:linear-gradient(90deg,var(--accent),#7aa7ff 60%,var(--c3));-webkit-background-clip:text;background-clip:text;color:transparent}
 .sub{color:var(--dim);font-size:12px}
